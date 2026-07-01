@@ -40,3 +40,5 @@
 1.Копируем git clone https://github.com/feirwel-spec/fizika.git
 2.Окройте папку проекта.
 3.Запустите файл index.html влюбом современном браузеpe (Chrome, Firefox, Safari, Edge)
+
+АВТОР TSOY ILYA
