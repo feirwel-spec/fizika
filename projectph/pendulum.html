@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Двойной маятник</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="bg-decorations">
+        <svg class="bg-decor" style="top: -5%; left: -5%; width: 450px; height: 450px;" viewBox="0 0 200 200">
+            <path d="M 20 100 C 40 40, 60 160, 100 100 C 140 40, 160 160, 180 100" stroke-width="2"/>
+            <path d="M 20 100 C 40 160, 60 40, 100 100 C 140 160, 160 40, 180 100" stroke-width="1" stroke-dasharray="4 4"/>
+        </svg>
+        <svg class="bg-decor" style="bottom: -10%; right: -5%; width: 500px; height: 500px;" viewBox="0 0 200 200">
+            <path d="M 30 30 Q 100 170 170 170 T 100 30" stroke-width="2"/>
+            <circle cx="100" cy="100" r="4"/>
+        </svg>
+    </div>
+
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Двойной маятник</h1>
+    </div>
+
+    <div class="layout">
+        <div class="card canvas-container">
+            <div class="canvas-header">
+                Окно симуляции
+                <div class="header-controls">
+                    <button id="resetCamBtn" class="btn-small">Центрировать</button>
+                </div>
+            </div>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+        </div>
+
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Длина стержня 1 (l1) <span id="l1Val" class="val-display">120 px</span></label>
+                <input type="range" id="len1" min="40" max="200" value="120">
+            </div>
+
+            <div class="control-group">
+                <label>Длина стержня 2 (l2) <span id="l2Val" class="val-display">120 px</span></label>
+                <input type="range" id="len2" min="40" max="200" value="120">
+            </div>
+
+            <div class="control-group">
+                <label>Масса груза 1 (m1) <span id="m1Val" class="val-display">10 кг</span></label>
+                <input type="range" id="mass1" min="1" max="50" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>Масса груза 2 (m2) <span id="m2Val" class="val-display">10 кг</span></label>
+                <input type="range" id="mass2" min="1" max="50" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>Затухание <span id="dampVal" class="val-display">0.00%</span></label>
+                <input type="range" id="damping" min="0" max="100" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Длина следа <span id="trailVal" class="val-display">500</span></label>
+                <input type="range" id="trailLen" min="10" max="1000" step="10" value="500">
+            </div>
+
+            <button id="resetBtn" class="btn-primary">Сбросить систему</button>
+            <button id="clearBtn" class="btn-danger">Очистить след</button>
+        </div>
+    </div>
+
+    <div class="watermark">TSOYILYA</div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let l1 = 120;
+        let l2 = 120;
+        let m1 = 10;
+        let m2 = 10;
+        let damp = 0;
+        let maxTrail = 500;
+
+        let theta1 = Math.PI / 2;
+        let theta2 = Math.PI / 2;
+        let omega1 = 0;
+        let omega2 = 0;
+
+        let trail = [];
+        const g = 9.81;
+
+        let zoom = 1;
+        let camX = 0;
+        let camY = 0;
+        let isDragging = false;
+        let startMouseX = 0;
+        let startMouseY = 0;
+        let startCamX = 0;
+        let startCamY = 0;
+
+        document.getElementById('len1').addEventListener('input', (e) => {
+            l1 = parseFloat(e.target.value);
+            document.getElementById('l1Val').innerText = l1 + ' px';
+        });
+        document.getElementById('len2').addEventListener('input', (e) => {
+            l2 = parseFloat(e.target.value);
+            document.getElementById('l2Val').innerText = l2 + ' px';
+        });
+        document.getElementById('mass1').addEventListener('input', (e) => {
+            m1 = parseFloat(e.target.value);
+            document.getElementById('m1Val').innerText = m1 + ' кг';
+        });
+        document.getElementById('mass2').addEventListener('input', (e) => {
+            m2 = parseFloat(e.target.value);
+            document.getElementById('m2Val').innerText = m2 + ' кг';
+        });
+        document.getElementById('damping').addEventListener('input', (e) => {
+            damp = parseFloat(e.target.value) / 10000;
+            document.getElementById('dampVal').innerText = (parseFloat(e.target.value) / 100).toFixed(2) + '%';
+        });
+        document.getElementById('trailLen').addEventListener('input', (e) => {
+            maxTrail = parseInt(e.target.value);
+            document.getElementById('trailVal').innerText = maxTrail;
+            if (trail.length > maxTrail) trail.splice(0, trail.length - maxTrail);
+        });
+
+        document.getElementById('resetCamBtn').addEventListener('click', () => {
+            camX = 0;
+            camY = 0;
+            zoom = 1;
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            trail = [];
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            l1 = 120;
+            l2 = 120;
+            m1 = 10;
+            m2 = 10;
+            damp = 0;
+            maxTrail = 500;
+
+            theta1 = Math.PI / 2;
+            theta2 = Math.PI / 2;
+            omega1 = 0;
+            omega2 = 0;
+            trail = [];
+
+            document.getElementById('len1').value = 120;
+            document.getElementById('len2').value = 120;
+            document.getElementById('mass1').value = 10;
+            document.getElementById('mass2').value = 10;
+            document.getElementById('damping').value = 0;
+            document.getElementById('trailLen').value = 500;
+
+            document.getElementById('l1Val').innerText = '120 px';
+            document.getElementById('l2Val').innerText = '120 px';
+            document.getElementById('m1Val').innerText = '10 кг';
+            document.getElementById('m2Val').innerText = '10 кг';
+            document.getElementById('dampVal').innerText = '0.00%';
+            document.getElementById('trailVal').innerText = '500';
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            isDragging = true;
+            startMouseX = (e.clientX - rect.left) * scaleX;
+            startMouseY = (e.clientY - rect.top) * scaleY;
+            startCamX = camX;
+            startCamY = camY;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const screenX = (e.clientX - rect.left) * scaleX;
+            const screenY = (e.clientY - rect.top) * scaleY;
+            camX = startCamX + (screenX - startMouseX);
+            camY = startCamY + (screenY - startMouseY);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'crosshair';
+            }
+        });
+
+        function updatePhysics() {
+            const steps = 25;
+            const dt = 0.1 / steps;
+
+            for (let i = 0; i < steps; i++) {
+                let mu = 1 + m1 / m2;
+                let dTheta = theta1 - theta2;
+
+                let num1 = g * (Math.sin(theta2) * Math.cos(dTheta) - mu * Math.sin(theta1)) - (l2 * omega2 * omega2 + l1 * omega1 * omega1 * Math.cos(dTheta)) * Math.sin(dTheta);
+                let den1 = l1 * (mu - Math.cos(dTheta) * Math.cos(dTheta));
+                let alpha1 = num1 / den1;
+
+                let num2 = g * mu * (Math.sin(theta1) * Math.cos(dTheta) - Math.sin(theta2)) + (mu * l1 * omega1 * omega1 + l2 * omega2 * omega2 * Math.cos(dTheta)) * Math.sin(dTheta);
+                let den2 = l2 * (mu - Math.cos(dTheta) * Math.cos(dTheta));
+                let alpha2 = num2 / den2;
+
+                omega1 += alpha1 * dt;
+                omega2 += alpha2 * dt;
+                
+                omega1 *= (1 - damp);
+                omega2 *= (1 - damp);
+
+                theta1 += omega1 * dt;
+                theta2 += omega2 * dt;
+            }
+        }
+
+        function draw() {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.translate(canvas.width / 2 + camX, canvas.height / 2 - 50 + camY);
+            ctx.scale(zoom, zoom);
+
+            updatePhysics();
+
+            let x1 = l1 * Math.sin(theta1);
+            let y1 = l1 * Math.cos(theta1);
+            let x2 = x1 + l2 * Math.sin(theta2);
+            let y2 = y1 + l2 * Math.cos(theta2);
+
+            trail.push({x: x2, y: y2});
+            if (trail.length > maxTrail) trail.shift();
+
+            if (trail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(trail[0].x, trail[0].y);
+                for (let i = 1; i < trail.length; i++) {
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                }
+                ctx.strokeStyle = 'rgba(142, 36, 170, 0.45)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = '#5f6368';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#202124';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(x1, y1, 8 + m1 * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#1a73e8';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(x2, y2, 8 + m2 * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#8e24aa';
+            ctx.fill();
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Геометрическая оптика</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="bg-decorations">
+        <svg class="bg-decor" style="top: -5%; left: -5%; width: 450px; height: 450px;" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="60" stroke-width="2"/>
+            <line x1="20" y1="100" x2="180" y2="100" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="40" y1="40" x2="160" y2="160" stroke-width="2"/>
+        </svg>
+        <svg class="bg-decor" style="bottom: -10%; right: -5%; width: 500px; height: 500px;" viewBox="0 0 200 200">
+            <path d="M 20 60 Q 100 130 180 60" stroke-width="3"/>
+            <line x1="20" y1="100" x2="180" y2="100" stroke-width="2"/>
+        </svg>
+    </div>
+
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Геометрическая оптика</h1>
+    </div>
+
+    <div class="layout">
+        <div class="card canvas-container">
+            <div class="canvas-header">
+                Окно симуляции
+                <div class="header-controls">
+                    <span class="canvas-hint">Кликайте по полю для размещения элементов</span>
+                    <button id="resetCamBtn" class="btn-small">Центрировать</button>
+                </div>
+            </div>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+        </div>
+
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Инструмент</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="toolType" value="laser" checked> 🔦 Новый лазер
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="toolType" value="convex"> 🔎 Собирающая линза
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="toolType" value="concave"> 🔬 Рассеивающая линза
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="toolType" value="mirror"> 🪞 Плоское зеркало
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="toolType" value="select"> ✋ Перемещение и настройка
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Масштаб камеры <span id="zoomVal" class="val-display" style="color: #0f9d58;">1.0x</span></label>
+                <input type="range" id="zoomCam" min="0.2" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label>Угол элемента <span id="angleVal" class="val-display">0°</span></label>
+                <input type="range" id="elementAngle" min="-180" max="180" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Фокус линзы <span id="focalVal" class="val-display">120 px</span></label>
+                <input type="range" id="lensFocal" min="40" max="300" step="5" value="120">
+            </div>
+
+            <button id="deleteBtn" class="btn-secondary" style="margin-top: 10px;">🗑 Удалить выбранный</button>
+            <button id="clearBtn" class="btn-danger">Очистить холст</button>
+        </div>
+    </div>
+
+    <div class="watermark">TSOYILYA</div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let optObjects = [];
+        let zoom = 1;
+        let camX = 0;
+        let camY = 0;
+        
+        let isDragging = false;
+        let draggedObj = null;
+        let selectedObj = null;
+        
+        let startMouseX = 0;
+        let startMouseY = 0;
+        let startCamX = 0;
+        let startCamY = 0;
+        
+        let currentTool = 'laser';
+        let globalAngle = 0;
+        let globalFocal = 120;
+
+        const WORLD_WIDTH = 600;
+        const WORLD_HEIGHT = 400;
+
+        document.querySelectorAll('input[name="toolType"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentTool = e.target.value;
+                canvas.style.cursor = currentTool === 'select' ? 'pointer' : 'crosshair';
+            });
+        });
+
+        document.getElementById('resetCamBtn').addEventListener('click', () => {
+            camX = 0;
+            camY = 0;
+            zoom = 1;
+            document.getElementById('zoomCam').value = 1;
+            document.getElementById('zoomVal').innerText = '1.0x';
+        });
+
+        document.getElementById('zoomCam').addEventListener('input', (e) => {
+            zoom = parseFloat(e.target.value);
+            document.getElementById('zoomVal').innerText = zoom.toFixed(1) + 'x';
+        });
+
+        document.getElementById('elementAngle').addEventListener('input', (e) => {
+            globalAngle = parseInt(e.target.value);
+            document.getElementById('angleVal').innerText = globalAngle + '°';
+            if (selectedObj) {
+                selectedObj.angle = globalAngle * Math.PI / 180;
+            }
+        });
+
+        document.getElementById('lensFocal').addEventListener('input', (e) => {
+            globalFocal = parseInt(e.target.value);
+            document.getElementById('focalVal').innerText = globalFocal + ' px';
+            if (selectedObj && (selectedObj.type === 'convex' || selectedObj.type === 'concave')) {
+                selectedObj.f = selectedObj.type === 'convex' ? globalFocal : -globalFocal;
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            optObjects = [];
+            selectedObj = null;
+            draggedObj = null;
+        });
+
+        document.getElementById('deleteBtn').addEventListener('click', () => {
+            if (selectedObj) {
+                optObjects = optObjects.filter(obj => obj !== selectedObj);
+                selectedObj = null;
+                draggedObj = null;
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (e.target.tagName.toLowerCase() !== 'input' && selectedObj) {
+                    optObjects = optObjects.filter(obj => obj !== selectedObj);
+                    selectedObj = null;
+                    draggedObj = null;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const screenX = (e.clientX - rect.left) * scaleX;
+            const screenY = (e.clientY - rect.top) * scaleY;
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const x = (screenX - cx - camX) / zoom + cx;
+            const y = (screenY - cy - camY) / zoom + cy;
+
+            if (currentTool === 'select') {
+                let found = false;
+                for (let obj of optObjects) {
+                    let d = Math.sqrt((obj.x - x)*(obj.x - x) + (obj.y - y)*(obj.y - y));
+                    if (d < 25 || (obj.type !== 'laser' && Math.abs(obj.x - x) < 25 && Math.abs(obj.y - y) < obj.h / 2)) {
+                        draggedObj = obj;
+                        selectedObj = obj;
+                        found = true;
+                        globalAngle = Math.round((obj.angle || 0) * 180 / Math.PI);
+                        document.getElementById('elementAngle').value = globalAngle;
+                        document.getElementById('angleVal').innerText = globalAngle + '°';
+                        if (obj.type === 'convex' || obj.type === 'concave') {
+                            globalFocal = Math.abs(obj.f);
+                            document.getElementById('lensFocal').value = globalFocal;
+                            document.getElementById('focalVal').innerText = globalFocal + ' px';
+                        }
+                        break;
+                    }
+                }
+                if (!found) {
+                    isDragging = true;
+                    startMouseX = screenX;
+                    startMouseY = screenY;
+                    startCamX = camX;
+                    startCamY = camY;
+                    canvas.style.cursor = 'dragging';
+                }
+            } else {
+                let newObj = { x: x, y: y, h: 140, angle: globalAngle * Math.PI / 180 };
+                if (currentTool === 'laser') {
+                    newObj.type = 'laser';
+                } else if (currentTool === 'convex') {
+                    newObj.type = 'convex';
+                    newObj.f = globalFocal;
+                } else if (currentTool === 'concave') {
+                    newObj.type = 'concave';
+                    newObj.f = -globalFocal;
+                } else if (currentTool === 'mirror') {
+                    newObj.type = 'mirror';
+                }
+                optObjects.push(newObj);
+                selectedObj = newObj;
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0) return;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const screenX = (e.clientX - rect.left) * scaleX;
+            const screenY = (e.clientY - rect.top) * scaleY;
+
+            if (isDragging) {
+                camX = startCamX + (screenX - startMouseX);
+                camY = startCamY + (screenY - startMouseY);
+            } else if (draggedObj) {
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                draggedObj.x = (screenX - cx - camX) / zoom + cx;
+                draggedObj.y = (screenY - cy - camY) / zoom + cy;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            draggedObj = null;
+            if (currentTool === 'select') canvas.style.cursor = 'pointer';
+        });
+
+        function traceRays() {
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(234, 67, 53, 0.8)';
+
+            for (let obj of optObjects) {
+                if (obj.type !== 'laser') continue;
+
+                let baseDX = Math.cos(obj.angle);
+                let baseDY = Math.sin(obj.angle);
+                let perpX = -baseDY;
+                let perpY = baseDX;
+
+                for (let i = -2; i <= 2; i++) {
+                    let rX = obj.x + perpX * (i * 8);
+                    let rY = obj.y + perpY * (i * 8);
+                    let rDX = baseDX;
+                    let rDY = baseDY;
+
+                    ctx.beginPath();
+                    ctx.moveTo(rX, rY);
+
+                    for (let step = 0; step < 5; step++) {
+                        let closestT = Infinity;
+                        let closestObj = null;
+                        let intersectYLocal = 0;
+
+                        for (let target of optObjects) {
+                            if (target.type === 'laser') continue;
+                            
+                            let targetAngle = target.angle || 0;
+                            let nx = Math.cos(targetAngle);
+                            let ny = Math.sin(targetAngle);
+                            
+                            let denom = rDX * nx + rDY * ny;
+                            if (Math.abs(denom) < 1e-6) continue;
+                            
+                            let t = ((target.x - rX) * nx + (target.y - rY) * ny) / denom;
+                            if (t > 0.01 && t < closestT) {
+                                let pX = rX + rDX * t;
+                                let pY = rY + rDY * t;
+                                
+                                let vx = -Math.sin(targetAngle);
+                                let vy = Math.cos(targetAngle);
+                                let hLocal = (pX - target.x) * vx + (pY - target.y) * vy;
+                                
+                                if (Math.abs(hLocal) <= target.h / 2) {
+                                    closestT = t;
+                                    closestObj = target;
+                                    intersectYLocal = hLocal;
+                                }
+                            }
+                        }
+
+                        if (!closestObj) {
+                            ctx.lineTo(rX + rDX * 3000, rY + rDY * 3000);
+                            break;
+                        } else {
+                            let nextX = rX + rDX * closestT;
+                            let nextY = rY + rDY * closestT;
+                            ctx.lineTo(nextX, nextY);
+
+                            rX = nextX;
+                            rY = nextY;
+
+                            let targetAngle = closestObj.angle || 0;
+                            let nx = Math.cos(targetAngle);
+                            let ny = Math.sin(targetAngle);
+
+                            if (closestObj.type === 'mirror') {
+                                let dot = rDX * nx + rDY * ny;
+                                rDX = rDX - 2 * dot * nx;
+                                rDY = rDY - 2 * dot * ny;
+                            } else if (closestObj.type === 'convex' || closestObj.type === 'concave') {
+                                let vx = -Math.sin(targetAngle);
+                                let vy = Math.cos(targetAngle);
+                                
+                                let dxLoc = rDX * nx + rDY * ny;
+                                let dyLoc = rDX * vx + rDY * vy;
+                                
+                                dyLoc = dyLoc - dxLoc * (intersectYLocal / closestObj.f);
+                                
+                                rDX = dxLoc * nx + dyLoc * vx;
+                                rDY = dxLoc * ny + dyLoc * vy;
+                                
+                                let len = Math.sqrt(rDX*rDX + rDY*rDY);
+                                if (len > 0) {
+                                    rDX /= len;
+                                    rDY /= len;
+                                }
+                            }
+                        }
+                    }
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawElements() {
+            for (let obj of optObjects) {
+                ctx.save();
+                
+                if (obj === selectedObj) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = 'rgba(26, 115, 232, 0.5)';
+                    ctx.lineWidth = 3;
+                } else {
+                    ctx.lineWidth = 2;
+                }
+
+                ctx.translate(obj.x, obj.y);
+                ctx.rotate(obj.angle || 0);
+
+                if (obj.type === 'laser') {
+                    ctx.fillStyle = '#5f6368';
+                    ctx.fillRect(-15, -12, 30, 24);
+                    ctx.fillStyle = '#ea4335';
+                    ctx.fillRect(15, -6, 5, 12);
+                } else if (obj.type === 'convex') {
+                    ctx.strokeStyle = '#1a73e8';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -obj.h / 2);
+                    ctx.lineTo(0, obj.h / 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#1a73e8';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -obj.h / 2);
+                    ctx.lineTo(-6, -obj.h / 2 + 10);
+                    ctx.lineTo(6, -obj.h / 2 + 10);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, obj.h / 2);
+                    ctx.lineTo(-6, obj.h / 2 - 10);
+                    ctx.lineTo(6, obj.h / 2 - 10);
+                    ctx.fill();
+                } else if (obj.type === 'concave') {
+                    ctx.strokeStyle = '#1a73e8';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -obj.h / 2);
+                    ctx.lineTo(0, obj.h / 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#1a73e8';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -obj.h / 2 + 10);
+                    ctx.lineTo(-6, -obj.h / 2);
+                    ctx.lineTo(6, -obj.h / 2);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, obj.h / 2 - 10);
+                    ctx.lineTo(-6, obj.h / 2);
+                    ctx.lineTo(6, obj.h / 2);
+                    ctx.fill();
+                } else if (obj.type === 'mirror') {
+                    ctx.strokeStyle = '#70757a';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -obj.h / 2);
+                    ctx.lineTo(0, obj.h / 2);
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#bdc1c6';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    for (let y = -obj.h / 2; y <= obj.h / 2; y += 8) {
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(-6, y + 6);
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function draw() {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.translate(canvas.width / 2 + camX, canvas.height / 2 + camY);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+            ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-2000, WORLD_HEIGHT / 2);
+            ctx.lineTo(2000, WORLD_HEIGHT / 2);
+            ctx.stroke();
+
+            traceRays();
+            drawElements();
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

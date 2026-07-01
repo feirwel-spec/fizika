@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Связанные осцилляторы</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-decorations">
+        <svg class="bg-decor" style="top: -5%; left: -5%; width: 500px; height: 500px;" viewBox="0 0 200 200">
+            <path d="M 20 100 Q 40 40 60 100 T 100 100 T 140 100 T 180 100" fill="none" stroke-width="3"/>
+            <circle cx="20" cy="100" r="4" fill="#202124"/><circle cx="60" cy="100" r="4" fill="#202124"/>
+            <circle cx="100" cy="100" r="4" fill="#202124"/><circle cx="140" cy="100" r="4" fill="#202124"/>
+        </svg>
+        <svg class="bg-decor" style="bottom: -10%; right: -5%; width: 450px; height: 450px;" viewBox="0 0 200 200">
+            <path d="M 20 100 Q 60 180 100 100 T 180 100" fill="none" stroke-width="2" stroke-dasharray="6 4"/>
+        </svg>
+    </div>
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Связанные осцилляторы</h1>
+    </div>
+    <div class="layout">
+        <div class="card canvas-container">
+            <div class="canvas-header">
+                Окно симуляции
+                <span class="hint">Потяните мышкой за любой грузик</span>
+            </div>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+        </div>
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Жесткость связи (k) <span id="kVal" class="val-display">50</span></label>
+                <input type="range" id="stiff" min="5" max="150" value="50">
+            </div>
+            <div class="control-group">
+                <label>Масса элементов (m) <span id="mVal" class="val-display">2.0</span></label>
+                <input type="range" id="mass" min="0.5" max="10" step="0.1" value="2.0">
+            </div>
+            <div class="control-group">
+                <label>Затухание <span id="dampVal" class="val-display">0.05</span></label>
+                <input type="range" id="damp" min="0" max="0.5" step="0.01" value="0.05">
+            </div>
+            <div class="control-group">
+                <label>Правый конец</label>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="boundary" value="fixed" checked> Закреплен</label>
+                    <label class="radio-label"><input type="radio" name="boundary" value="free"> Свободен</label>
+                </div>
+            </div>
+            <button id="pulseBtn" class="btn-primary">Запустить импульс</button>
+            <button id="stopBtn" class="btn-secondary">Остановить волну</button>
+        </div>
+    </div>
+    <div class="watermark">TSOYILYA</div>
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const N = 50;
+        let nodes = [];
+        let k = 50;
+        let m = 2.0;
+        let damp = 0.05;
+        let rightFixed = true;
+        let draggedNode = -1;
+        const startX = 50;
+        const endX = 550;
+        const gap = (endX - startX) / (N - 1);
+        const centerY = 200;
+
+        function initNodes() {
+            nodes = [];
+            for (let i = 0; i < N; i++) {
+                nodes.push({ x: startX + i * gap, y: centerY, vy: 0 });
+            }
+        }
+        initNodes();
+
+        document.getElementById('stiff').addEventListener('input', (e) => {
+            k = parseFloat(e.target.value);
+            document.getElementById('kVal').innerText = k;
+        });
+        document.getElementById('mass').addEventListener('input', (e) => {
+            m = parseFloat(e.target.value);
+            document.getElementById('mVal').innerText = m.toFixed(1);
+        });
+        document.getElementById('damp').addEventListener('input', (e) => {
+            damp = parseFloat(e.target.value);
+            document.getElementById('dampVal').innerText = damp.toFixed(2);
+        });
+        document.querySelectorAll('input[name="boundary"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                rightFixed = e.target.value === 'fixed';
+                if (rightFixed) {
+                    nodes[N-1].y = centerY;
+                    nodes[N-1].vy = 0;
+                }
+            });
+        });
+        document.getElementById('pulseBtn').addEventListener('click', () => {
+            nodes[1].vy = 800;
+        });
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            for (let i = 0; i < N; i++) {
+                nodes[i].y = centerY;
+                nodes[i].vy = 0;
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+            
+            let closest = -1;
+            let minDist = 30;
+            for (let i = 1; i < N - (rightFixed ? 1 : 0); i++) {
+                let dx = nodes[i].x - mx;
+                let dy = nodes[i].y - my;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = i;
+                }
+            }
+            if (closest !== -1) draggedNode = closest;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (draggedNode === -1) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleY = canvas.height / rect.height;
+            nodes[draggedNode].y = (e.clientY - rect.top) * scaleY;
+            nodes[draggedNode].vy = 0;
+        });
+
+        window.addEventListener('mouseup', () => { draggedNode = -1; });
+
+        function updatePhysics() {
+            const subSteps = 10;
+            const dt = 0.05 / subSteps;
+            for (let step = 0; step < subSteps; step++) {
+                let forces = new Array(N).fill(0);
+                for (let i = 1; i < N - 1; i++) {
+                    forces[i] = k * (nodes[i-1].y - 2 * nodes[i].y + nodes[i+1].y) - damp * nodes[i].vy;
+                }
+                if (!rightFixed) {
+                    forces[N-1] = k * (nodes[N-2].y - nodes[N-1].y) - damp * nodes[N-1].vy;
+                }
+                for (let i = 1; i < N; i++) {
+                    if (i === N - 1 && rightFixed) continue;
+                    if (i === draggedNode) continue;
+                    nodes[i].vy += (forces[i] / m) * dt;
+                    nodes[i].y += nodes[i].vy * dt;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updatePhysics();
+
+            ctx.beginPath();
+            ctx.moveTo(startX, centerY);
+            ctx.lineTo(endX, centerY);
+            ctx.strokeStyle = '#e8eaed';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(nodes[0].x, nodes[0].y);
+            for (let i = 1; i < N; i++) {
+                ctx.lineTo(nodes[i].x, nodes[i].y);
+            }
+            ctx.strokeStyle = '#1a73e8';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            ctx.fillStyle = '#5f6368';
+            ctx.fillRect(startX - 10, centerY - 20, 10, 40);
+            if (rightFixed) {
+                ctx.fillRect(endX, centerY - 20, 10, 40);
+            }
+
+            for (let i = 0; i < N; i++) {
+                if ((i === 0) || (i === N - 1 && rightFixed)) {
+                    ctx.fillStyle = '#ea4335';
+                    ctx.beginPath();
+                    ctx.arc(nodes[i].x, nodes[i].y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    let dy = Math.abs(nodes[i].y - centerY);
+                    let colorRatio = Math.min(1, dy / 100);
+                    let r = Math.floor(66 + colorRatio * (234 - 66));
+                    let g = Math.floor(133 - colorRatio * (133 - 67));
+                    let b = Math.floor(244 - colorRatio * (244 - 53));
+                    
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    ctx.beginPath();
+                    ctx.arc(nodes[i].x, nodes[i].y, i === draggedNode ? 6 : 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>

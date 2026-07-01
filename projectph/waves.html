@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерференция волн</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="bg-decorations">
+        <svg class="bg-decor" style="top: -5%; left: -5%; width: 400px; height: 400px;" viewBox="0 0 100 100">
+            <circle cx="10" cy="50" r="20" stroke-width="0.5"/>
+            <circle cx="10" cy="50" r="30" stroke-width="0.5"/>
+            <circle cx="10" cy="50" r="40" stroke-width="0.5"/>
+            <circle cx="10" cy="50" r="50" stroke-width="0.5"/>
+        </svg>
+        <svg class="bg-decor" style="bottom: -10%; right: -5%; width: 500px; height: 500px;" viewBox="0 0 200 100">
+            <path d="M 10 50 Q 30 20 50 50 T 90 50 T 130 50 T 170 50" stroke-width="1.5"/>
+            <path d="M 10 50 Q 30 80 50 50 T 90 50 T 130 50 T 170 50" stroke-width="1" stroke-dasharray="2 2"/>
+        </svg>
+    </div>
+
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Интерференция волн (Опыт Юнга)</h1>
+    </div>
+
+    <div class="layout">
+        <div class="card canvas-container black-canvas">
+            <div class="canvas-header">Волновой резервуар и интерференционный экран</div>
+            <canvas id="simCanvas" width="300" height="200"></canvas>
+        </div>
+
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Расстояние между щелями (d) <span id="distVal" class="val-display">40 px</span></label>
+                <input type="range" id="slitDist" min="10" max="100" value="40">
+            </div>
+
+            <div class="control-group">
+                <label>Длина волны (λ) <span id="waveVal" class="val-display">15 px</span></label>
+                <input type="range" id="wavelength" min="8" max="35" value="15">
+            </div>
+
+            <div class="control-group">
+                <label>Скорость симуляции <span id="speedVal" class="val-display">1.0x</span></label>
+                <input type="range" id="simSpeed" min="0" max="20" step="1" value="10">
+            </div>
+
+            <div class="legend">
+                <strong style="color: #202124; display: block; margin-bottom: 4px;">Цветовая карта поля:</strong>
+                <span style="color: #4285f4;">■</span> Положительная фаза (Гребень)<br>
+                <span style="color: #ea4335;">■</span> Отрицательная фаза (Впадина)<br>
+                <strong style="color: #202124; display: block; margin-top: 10px; margin-bottom: 4px;">Правая панель:</strong>
+                Интенсивность света на удаленном экране ($I \propto A^2$).
+            </div>
+        </div>
+    </div>
+
+    <div class="watermark">TSOYILYA</div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let slitD = 40;
+        let lambda = 15;
+        let speedFactor = 0.1;
+        let time = 0;
+
+        const W = canvas.width;
+        const H = canvas.height;
+        const screenX = 260; 
+
+        document.getElementById('slitDist').addEventListener('input', (e) => {
+            slitD = parseInt(e.target.value);
+            document.getElementById('distVal').innerText = slitD + ' px';
+        });
+
+        document.getElementById('wavelength').addEventListener('input', (e) => {
+            lambda = parseInt(e.target.value);
+            document.getElementById('waveVal').innerText = lambda + ' px';
+        });
+
+        document.getElementById('simSpeed').addEventListener('input', (e) => {
+            let s = parseInt(e.target.value);
+            speedFactor = s * 0.01;
+            document.getElementById('speedVal').innerText = (s / 10).toFixed(1) + 'x';
+        });
+
+        function draw() {
+            time += speedFactor;
+
+            let imgData = ctx.createImageData(W, H);
+            let data = imgData.data;
+
+            let y1 = H / 2 - slitD / 2;
+            let y2 = H / 2 + slitD / 2;
+            let xSrc = 20;
+
+            let idx = 0;
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    if (x < screenX) {
+                        let d1 = Math.sqrt((x - xSrc) * (x - xSrc) + (y - y1) * (y - y1));
+                        let d2 = Math.sqrt((x - xSrc) * (x - xSrc) + (y - y2) * (y - y2));
+
+                        let v1 = Math.sin(d1 / lambda - time);
+                        let v2 = Math.sin(d2 / lambda - time);
+                        
+                        if (d1 < 5) v1 = 0;
+                        if (d2 < 5) v2 = 0;
+
+                        let totalAmp = v1 + v2; 
+
+                        let r = 0, g = 0, b = 0;
+                        if (totalAmp > 0) {
+                            g = Math.min(255, totalAmp * 50);
+                            b = Math.min(255, totalAmp * 110);
+                        } else {
+                            r = Math.min(255, -totalAmp * 110);
+                        }
+
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        data[idx + 3] = 255;
+                    } else {
+                        let d1 = Math.sqrt((screenX - xSrc) * (screenX - xSrc) + (y - y1) * (y - y1));
+                        let d2 = Math.sqrt((screenX - xSrc) * (screenX - xSrc) + (y - y2) * (y - y2));
+
+                        let v1 = Math.sin(d1 / lambda - time);
+                        let v2 = Math.sin(d2 / lambda - time);
+
+                        let totalAmp = v1 + v2;
+                        let intensity = (totalAmp * totalAmp) / 4; 
+                        let bright = Math.min(255, intensity * 255);
+
+                        data[idx] = bright;
+                        data[idx + 1] = bright;
+                        data[idx + 2] = bright;
+                        data[idx + 3] = 255;
+                    }
+                    idx += 4;
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(xSrc - 2, 0, 4, y1);
+            ctx.fillRect(xSrc - 2, y1 + 4, 4, y2 - y1 - 8);
+            ctx.fillRect(xSrc - 2, y2 + 4, 4, H - y2);
+
+            ctx.fillStyle = '#fbbc04';
+            ctx.beginPath();
+            ctx.arc(xSrc, y1, 3, 0, Math.PI * 2);
+            ctx.arc(xSrc, y2, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#5f6368';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(screenX, 0);
+            ctx.lineTo(screenX, H);
+            ctx.stroke();
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

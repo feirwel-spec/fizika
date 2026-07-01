@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лаборатория цепей постоянного тока</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-decorations">
+        <svg class="bg-decor" style="top: 0; left: 0; width: 400px; height: 400px;" viewBox="0 0 100 100">
+            <rect x="20" y="20" width="60" height="60" stroke-width="0.5"/>
+            <circle cx="20" cy="50" r="3" fill="#202124"/>
+            <circle cx="80" cy="50" r="3" fill="#202124"/>
+        </svg>
+    </div>
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn"><span class="material-icons">arrow_back</span></a>
+        <h1>Лаборатория цепей</h1>
+    </div>
+    <div class="layout">
+        <div class="card canvas-container">
+            <div class="canvas-header">Поле сборки схемы <span class="hint">Удержание — рисовать, Правый клик — удалить</span></div>
+            <canvas id="simCanvas" width="600" height="450"></canvas>
+        </div>
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Инструменты</label>
+                <div class="tools-grid">
+                    <div class="tool-btn active" data-type="wire"><span class="material-icons">timeline</span> Провод</div>
+                    <div class="tool-btn" data-type="battery"><span class="material-icons">battery_charging_full</span> Батарея</div>
+                    <div class="tool-btn" data-type="resistor"><span class="material-icons">square</span> Резистор</div>
+                    <div class="tool-btn" data-type="bulb"><span class="material-icons">lightbulb</span> Лампа</div>
+                    <div class="tool-btn" data-type="switch"><span class="material-icons">toggle_off</span> Ключ</div>
+                    <div class="tool-btn" data-type="meter"><span class="material-icons">speed</span> Амперметр</div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Напряжение (U) <span id="vVal" class="val-display">9 В</span></label>
+                <input type="range" id="voltage" min="1" max="36" value="9">
+            </div>
+            <div class="control-group">
+                <label>Сопротивление (R) <span id="rVal" class="val-display">10 Ом</span></label>
+                <input type="range" id="resistance" min="1" max="100" value="10">
+            </div>
+            <div class="hint">
+                💡 Замкните цепь через элементы и батарею. Лампочка горит ярче при высоком токе! Ток отображается на Амперметре.
+            </div>
+            <button id="clearBtn" class="btn-danger">Очистить всё</button>
+        </div>
+    </div>
+    <div class="watermark">TSOYILYA</div>
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 40;
+        let components = [];
+        let currentTool = 'wire';
+        let batteryVoltage = 9;
+        let globalR = 10;
+        let currentPathCoords = [];
+        let electronPhase = 0;
+
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTool = btn.getAttribute('data-type');
+            });
+        });
+
+        document.getElementById('voltage').addEventListener('input', (e) => {
+            batteryVoltage = parseInt(e.target.value);
+            document.getElementById('vVal').innerText = batteryVoltage + ' В';
+        });
+
+        document.getElementById('resistance').addEventListener('input', (e) => {
+            globalR = parseInt(e.target.value);
+            document.getElementById('rVal').innerText = globalR + ' Ом';
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => components = []);
+
+        function addComponent(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (e.clientX - rect.left) * scaleX;
+            const canvasY = (e.clientY - rect.top) * scaleY;
+            const x = Math.round(canvasX / gridSize) * gridSize;
+            const y = Math.round(canvasY / gridSize) * gridSize;
+            
+            if(x < gridSize || x > canvas.width - gridSize || y < gridSize || y > canvas.height - gridSize) return;
+
+            let comp = components.find(c => c.x === x && c.y === y);
+            
+            if (comp) {
+                if (e.type === 'mousedown' && comp.type === 'switch') {
+                    comp.state = !comp.state;
+                    return;
+                }
+                if (comp.type !== currentTool) {
+                    components = components.filter(c => c !== comp);
+                } else {
+                    return; 
+                }
+            }
+            components.push({ x, y, type: currentTool, state: false, hasCurrent: false });
+        }
+
+        function removeComponent(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (e.clientX - rect.left) * scaleX;
+            const canvasY = (e.clientY - rect.top) * scaleY;
+            const x = Math.round(canvasX / gridSize) * gridSize;
+            const y = Math.round(canvasY / gridSize) * gridSize;
+            components = components.filter(c => c.x !== x || c.y !== y);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) addComponent(e);
+            else if (e.button === 2) removeComponent(e);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (e.buttons === 1) addComponent(e);
+            else if (e.buttons === 2) removeComponent(e);
+        });
+
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        function solveCircuit() {
+            components.forEach(c => c.hasCurrent = false);
+            currentPathCoords = [];
+            
+            let battery = components.find(c => c.type === 'battery');
+            if (!battery) return 0;
+
+            function isAdj(a, b) {
+                let dx = Math.abs(a.x - b.x);
+                let dy = Math.abs(a.y - b.y);
+                return (dx === gridSize && dy === 0) || (dx === 0 && dy === gridSize);
+            }
+
+            let nodes = components.filter(c => !(c.type === 'switch' && !c.state));
+            if (!nodes.includes(battery)) return 0;
+
+            let batteryIndex = nodes.indexOf(battery);
+            let adj = Array(nodes.length).fill(0).map(() => []);
+
+            for(let i=0; i<nodes.length; i++) {
+                for(let j=i+1; j<nodes.length; j++) {
+                    if(isAdj(nodes[i], nodes[j])) {
+                        adj[i].push(j);
+                        adj[j].push(i);
+                    }
+                }
+            }
+
+            let bNeighbors = adj[batteryIndex];
+            if (bNeighbors.length < 2) return 0;
+
+            let start = bNeighbors[0];
+            let targetSet = new Set(bNeighbors.slice(1));
+
+            let queue = [[start]];
+            let visited = new Set([start]);
+            let validPath = null;
+
+            while(queue.length > 0) {
+                let path = queue.shift();
+                let curr = path[path.length - 1];
+
+                if (targetSet.has(curr)) {
+                    validPath = path;
+                    break;
+                }
+
+                for(let n of adj[curr]) {
+                    if (n === batteryIndex) continue; 
+                    if (!visited.has(n)) {
+                        visited.add(n);
+                        queue.push([...path, n]);
+                    }
+                }
+            }
+
+            if (validPath) {
+                let resistance = 2;
+                battery.hasCurrent = true;
+                currentPathCoords.push({x: battery.x, y: battery.y});
+                
+                for(let nodeIdx of validPath) {
+                    let comp = nodes[nodeIdx];
+                    comp.hasCurrent = true;
+                    currentPathCoords.push({x: comp.x, y: comp.y});
+                    
+                    if (comp.type === 'resistor') resistance += globalR;
+                    if (comp.type === 'bulb') resistance += 10;
+                }
+                currentPathCoords.push({x: battery.x, y: battery.y});
+                return batteryVoltage / resistance;
+            }
+
+            return 0;
+        }
+
+        function drawGrid() {
+            ctx.beginPath();
+            ctx.strokeStyle = '#f1f3f4';
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+            }
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+        }
+
+        function drawComponent(c, current) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+
+            let neighbors = components.filter(other => {
+                let dx = Math.abs(c.x - other.x);
+                let dy = Math.abs(c.y - other.y);
+                return (dx === gridSize && dy === 0) || (dx === 0 && dy === gridSize);
+            });
+
+            let vCount = 0, hCount = 0;
+            neighbors.forEach(n => {
+                if (n.x === c.x) vCount++;
+                if (n.y === c.y) hCount++;
+            });
+            let isVertical = vCount > hCount;
+
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = c.hasCurrent ? '#1a73e8' : '#bdc1c6';
+
+            neighbors.forEach(n => {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo((n.x - c.x) / 2, (n.y - c.y) / 2);
+                ctx.stroke();
+            });
+
+            ctx.strokeStyle = '#3c4043';
+            ctx.lineWidth = 3;
+
+            if (c.type === 'wire') {
+                ctx.fillStyle = c.hasCurrent ? '#1a73e8' : '#bdc1c6';
+                ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+            } else if (c.type === 'battery') {
+                ctx.fillStyle = '#ea4335'; ctx.fillRect(-14, -14, 28, 28);
+                ctx.fillStyle = 'white'; ctx.font = 'bold 14px Roboto'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('U', 0, 1);
+            } else if (c.type === 'resistor') {
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(-14, -14, 28, 28); 
+                if (isVertical) {
+                    ctx.strokeRect(-6, -12, 12, 24);
+                } else {
+                    ctx.strokeRect(-12, -6, 24, 12);
+                }
+                ctx.fillStyle = '#202124'; ctx.font = 'bold 12px Roboto'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('R', 0, 1);
+            } else if (c.type === 'bulb') {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                if (c.hasCurrent && current > 0) {
+                    ctx.fillStyle = `rgba(251, 188, 4, ${Math.min(1, current * 0.4)})`;
+                    ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI*2); ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(6, 6); ctx.moveTo(6, -6); ctx.lineTo(-6, 6); ctx.stroke();
+                }
+            } else if (c.type === 'switch') {
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(-14, -14, 28, 28);
+                ctx.save();
+                if (isVertical) ctx.rotate(Math.PI / 2);
+                ctx.beginPath(); ctx.moveTo(-12, 0); 
+                if (c.state) ctx.lineTo(12, 0); else ctx.lineTo(8, -12);
+                ctx.stroke();
+                ctx.fillStyle = '#ea4335'; 
+                ctx.beginPath(); ctx.arc(-12, 0, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(12, 0, 3, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            } else if (c.type === 'meter') {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#1a73e8'; ctx.font = 'bold 10px Roboto'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.hasCurrent ? current.toFixed(1)+'A' : '0.0A', 0, 1);
+            }
+
+            ctx.restore();
+        }
+
+        function drawElectrons(current) {
+            if (currentPathCoords.length < 2 || current === 0) return;
+            
+            let totalLen = currentPathCoords.length - 1;
+            let speed = current * 0.05;
+            electronPhase += speed;
+            
+            ctx.fillStyle = '#fbbc04';
+            
+            let numElectrons = Math.max(3, currentPathCoords.length * 1.5);
+            for(let i=0; i<numElectrons; i++) {
+                let p = (electronPhase + (i / numElectrons) * totalLen) % totalLen;
+                let idx = Math.floor(p);
+                let fract = p - idx;
+                
+                let p1 = currentPathCoords[idx];
+                let p2 = currentPathCoords[(idx + 1) % currentPathCoords.length];
+                
+                if(p1 && p2) {
+                    let ex = p1.x + (p2.x - p1.x) * fract;
+                    let ey = p1.y + (p2.y - p1.y) * fract;
+                    
+                    ctx.beginPath();
+                    ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+            
+            let current = solveCircuit();
+            components.forEach(c => drawComponent(c, current));
+            drawElectrons(current);
+            
+            requestAnimationFrame(draw);
+        }
+
+        function preloadCircuit() {
+            components = [
+                {x: 200, y: 200, type: 'battery', state: false, hasCurrent: false},
+                {x: 240, y: 200, type: 'meter', state: false, hasCurrent: false},
+                {x: 280, y: 200, type: 'wire', state: false, hasCurrent: false},
+                {x: 280, y: 160, type: 'wire', state: false, hasCurrent: false},
+                {x: 280, y: 120, type: 'bulb', state: false, hasCurrent: false},
+                {x: 240, y: 120, type: 'wire', state: false, hasCurrent: false},
+                {x: 200, y: 120, type: 'switch', state: true, hasCurrent: false},
+                {x: 160, y: 120, type: 'wire', state: false, hasCurrent: false},
+                {x: 160, y: 160, type: 'resistor', state: false, hasCurrent: false},
+                {x: 160, y: 200, type: 'wire', state: false, hasCurrent: false}
+            ];
+        }
+
+        preloadCircuit();
+        draw();
+        
+    </script>
+</body>
+</html>

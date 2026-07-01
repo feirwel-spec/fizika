@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сила Лоренца</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Фоновые декорации: Магнетизм -->
+    <div class="bg-decorations">
+        <!-- Магнит -->
+        <svg class="bg-decor" style="top: -10%; left: -5%; width: 500px; height: 500px;" viewBox="0 0 200 200">
+            <path d="M 40 160 L 40 80 Q 100 10 160 80 L 160 160 L 120 160 L 120 80 Q 100 40 80 80 L 80 160 Z" stroke-width="4"/>
+            <line x1="40" y1="120" x2="80" y2="120" stroke-width="3"/>
+            <line x1="120" y1="120" x2="160" y2="120" stroke-width="3"/>
+            <text x="60" y="150" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" stroke="none" fill="#202124">N</text>
+            <text x="140" y="150" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" stroke="none" fill="#202124">S</text>
+        </svg>
+        <!-- Спиральная траектория -->
+        <svg class="bg-decor" style="bottom: -15%; right: -10%; width: 700px; height: 700px;" viewBox="0 0 200 200">
+            <path d="M 100 100 m -10 0 a 10 10 0 1 0 20 0 a 20 20 0 1 0 -40 0 a 30 30 0 1 0 60 0 a 40 40 0 1 0 -80 0 a 50 50 0 1 0 100 0 a 60 60 0 1 0 -120 0" fill="none" stroke-width="3"/>
+            <circle cx="30" cy="30" r="6" fill="none" stroke-width="2"/><circle cx="30" cy="30" r="1" fill="#202124"/>
+            <circle cx="170" cy="30" r="6" fill="none" stroke-width="2"/><circle cx="170" cy="30" r="1" fill="#202124"/>
+            <circle cx="30" cy="170" r="6" fill="none" stroke-width="2"/><circle cx="30" cy="170" r="1" fill="#202124"/>
+            <circle cx="170" cy="170" r="6" fill="none" stroke-width="2"/><circle cx="170" cy="170" r="1" fill="#202124"/>
+        </svg>
+    </div>
+
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Движение в магнитном поле</h1>
+    </div>
+
+    <div class="layout">
+        <div class="card canvas-container">
+            <div class="canvas-header">Окно симуляции</div>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+        </div>
+
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Масштаб камеры <span id="zoomVal" class="val-display" style="color: #0f9d58;">1.0x</span></label>
+                <input type="range" id="zoom" min="0.2" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label>Заряд q <span id="qVal" class="val-display">1</span></label>
+                <input type="range" id="charge" min="-5" max="5" value="1">
+            </div>
+            
+            <div class="control-group">
+                <label>Магнитное поле B <span id="bVal" class="val-display">2</span></label>
+                <input type="range" id="bField" min="-5" max="5" value="2">
+                <div class="hint">(>0 к нам ⊙, <0 от нас ⊗)</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Начальная скорость v <span id="vVal" class="val-display">50</span></label>
+                <input type="range" id="velocity" min="10" max="150" value="50">
+            </div>
+            
+            <button id="resetBtn" class="btn-primary">Запустить частицу</button>
+        </div>
+    </div>
+
+    <div class="watermark">TSOYILYA</div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let zoom = 1;
+
+        document.getElementById('zoom').addEventListener('input', (e) => {
+            zoom = parseFloat(e.target.value);
+            document.getElementById('zoomVal').innerText = zoom.toFixed(1) + 'x';
+        });
+        document.getElementById('charge').addEventListener('input', (e) => {
+            document.getElementById('qVal').innerText = e.target.value;
+        });
+        document.getElementById('bField').addEventListener('input', (e) => {
+            document.getElementById('bVal').innerText = e.target.value;
+        });
+        document.getElementById('velocity').addEventListener('input', (e) => {
+            document.getElementById('vVal').innerText = e.target.value;
+        });
+
+        let particle = { x: 300, y: 200, vx: 50, vy: 0, q: 1, m: 1 };
+        let path = []; 
+        let bField = 2;
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            particle.x = canvas.width / 2;
+            particle.y = canvas.height / 2;
+            particle.vx = parseFloat(document.getElementById('velocity').value);
+            particle.vy = 0;
+            particle.q = parseFloat(document.getElementById('charge').value);
+            bField = parseFloat(document.getElementById('bField').value);
+            path = [];
+        });
+
+        function update() {
+            const dt = 0.05;
+            particle.q = parseFloat(document.getElementById('charge').value);
+            bField = parseFloat(document.getElementById('bField').value);
+
+            let fx = particle.q * particle.vy * bField;
+            let fy = -particle.q * particle.vx * bField;
+
+            particle.vx += (fx / particle.m) * dt;
+            particle.vy += (fy / particle.m) * dt;
+            particle.x += particle.vx * dt;
+            particle.y += particle.vy * dt;
+
+            path.push({x: particle.x, y: particle.y});
+            if (path.length > 500) path.shift(); 
+        }
+
+        function drawBackground() {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            
+            ctx.fillStyle = '#bdc1c6';
+            ctx.font = '16px Roboto';
+            ctx.textAlign = 'center';
+            for(let i = -1000; i < 2000; i+=40) {
+                for(let j = -1000; j < 2000; j+=40) {
+                    if (bField > 0) ctx.fillText('⊙', i, j); 
+                    else if (bField < 0) ctx.fillText('⊗', i, j); 
+                }
+            }
+        }
+
+        function draw() {
+            update();
+            
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+            drawBackground();
+
+            ctx.beginPath();
+            for(let i=0; i<path.length; i++) {
+                if(i===0) ctx.moveTo(path[i].x, path[i].y);
+                else ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.strokeStyle = 'rgba(217, 48, 37, 0.6)';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = particle.q > 0 ? '#ea4335' : (particle.q < 0 ? '#4285f4' : '#80868b');
+            ctx.fill();
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Roboto';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(particle.q > 0 ? '+' : (particle.q < 0 ? '-' : '0'), particle.x, particle.y);
+
+            requestAnimationFrame(draw);
+        }
+
+        document.getElementById('resetBtn').click(); 
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+/* =========================================
+   БАЗОВЫЕ СТИЛИ И ФОН
+   ========================================= */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f1f3f4;
+    background-image: radial-gradient(#bdc1c6 1.5px, transparent 1.5px);
+    background-size: 30px 30px;
+    position: relative;
+    min-height: 100vh;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 24px;
+    color: #202124;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Декорации на фоне */
+.bg-decorations {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.bg-decor {
+    position: absolute;
+    opacity: 0.04;
+    fill: none;
+    stroke: #202124;
+    stroke-width: 2;
+}
+
+/* =========================================
+   ШАПКА И ЗАГОЛОВКИ
+   ========================================= */
+.header-bar {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 16px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    margin-top: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+h1 {
+    font-size: 28px;
+    font-weight: 400;
+    margin: 0;
+}
+
+.header h1 {
+    font-size: 42px;
+    font-weight: 500;
+    margin: 0 0 10px 0;
+    color: #202124;
+    letter-spacing: -0.5px;
+}
+
+p.subtitle {
+    font-size: 18px;
+    color: #5f6368;
+    margin: 0;
+}
+
+/* =========================================
+   СЕТКА И КОНТЕЙНЕРЫ (КАРТОЧКИ)
+   ========================================= */
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+}
+
+.menu-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+    max-width: 1100px;
+    position: relative;
+    z-index: 1;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Специфичные стили для карточек в меню */
+.menu-container .card {
+    width: 320px;
+    padding: 0;
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+    overflow: hidden;
+}
+
+.menu-container .card:hover {
+    box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+    transform: translateY(-4px);
+}
+
+.card-image {
+    width: 100%;
+    height: 140px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e8eaed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.card-image svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-header {
+    padding: 20px 24px 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-header h2 {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0;
+    color: #202124;
+}
+
+.card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #e8f0fe;
+    color: #1a73e8;
+}
+
+.card-icon .material-icons { font-size: 20px; }
+.card-body { padding: 16px 24px; flex-grow: 1; }
+.card p { font-size: 14px; line-height: 1.5; color: #5f6368; margin: 0; }
+.card-actions { padding: 16px 24px 24px 24px; display: flex; justify-content: flex-end; }
+
+/* =========================================
+   КНОПКИ
+   ========================================= */
+.icon-btn {
+    background: none;
+    border: none;
+    color: #5f6368;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    text-decoration: none;
+}
+
+.icon-btn:hover { background-color: #e8eaed; color: #202124; }
+
+.btn, .btn-primary, .btn-danger, .btn-secondary {
+    text-decoration: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    display: inline-block;
+    text-align: center;
+}
+
+.btn, .btn-primary { background-color: #1a73e8; color: white; margin-top: 10px; }
+.btn:hover, .btn-primary:hover { background-color: #1b66c9; box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15); }
+
+.btn-danger { background-color: #d93025; color: white; margin-top: 10px; }
+.btn-danger:hover { background-color: #c5221f; box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15); }
+
+.btn-secondary { background-color: #f1f3f4; color: #202124; border: 1px solid #dadce0; box-shadow: none; margin-top: 5px;}
+.btn-secondary:hover { background-color: #e8eaed; }
+
+.btn-small {
+    background: none;
+    border: 1px solid #dadce0;
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: #1a73e8;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-small:hover { background-color: #f8f9fa; }
+
+/* =========================================
+   КАНВАС И СИМУЛЯЦИИ
+   ========================================= */
+.canvas-container { padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 100%; border-radius: 8px;}
+.canvas-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #dadce0;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+}
+
+canvas {
+    background-color: #ffffff;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    width: 100%;
+    display: block;
+}
+
+/* Специфичные фоны канваса */
+#simCanvas { cursor: crosshair; }
+.black-canvas canvas { background-color: #000000; } /* Для оптики и интерференции */
+
+/* =========================================
+   ЭЛЕМЕНТЫ УПРАВЛЕНИЯ
+   ========================================= */
+.controls-container { display: flex; flex-direction: column; gap: 20px; }
+.control-group { display: flex; flex-direction: column; gap: 8px; }
+label { font-size: 14px; font-weight: 500; color: #202124; display: flex; justify-content: space-between; align-items: center; }
+.val-display { color: #1a73e8; font-weight: 700; }
+input[type="range"] { width: 100%; accent-color: #1a73e8; }
+
+.tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+.tool-btn:hover { background: #e8f0fe; }
+.tool-btn.active { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; font-weight: 700; }
+
+.radio-group { display: flex; gap: 8px; background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #dadce0; }
+.radio-label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; font-size: 13px; }
+
+/* =========================================
+   ВЫНОСКИ, БЕЙДЖИ И ПРОЧЕЕ
+   ========================================= */
+.watermark {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #bdc1c6;
+    letter-spacing: 2px;
+    pointer-events: none;
+    z-index: 1000;
+    user-select: none;
+}
+
+.hint { font-size: 13px; color: #5f6368; font-weight: 400; background: #f1f3f4; padding: 10px; border-radius: 4px; line-height: 1.4; }
+.legend { margin-top: 5px; font-size: 13px; line-height: 1.6; color: #5f6368; background: #f8f9fa; padding: 12px; border-radius: 4px; border: 1px solid #e8eaed; }
+.status-badge { background-color: #e8f0fe; color: #1a73e8; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 700; }
+
+/* =========================================
+   ПАНЕЛЬ ПОЛЬЗОВАТЕЛЯ И API
+   ========================================= */
+.user-panel {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    max-width: 1008px;
+    width: 100%;
+    margin: 0 auto 40px auto;
+    padding: 24px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+}
+
+.user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e8eaed;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+}
+
+.user-header h2 { margin: 0; font-size: 22px; font-weight: 500; }
+
+.quote-box {
+    background: #f8f9fa;
+    border-left: 4px solid #1a73e8;
+    padding: 16px;
+    border-radius: 0 8px 8px 0;
+    color: #5f6368;
+    font-style: italic;
+    min-height: 40px;
+}
+
+.quote-author { font-weight: bold; margin-top: 8px; display: block; color: #202124; font-style: normal; }
+.error-text { color: #d93025; font-style: normal; }
+.loader { display: flex; align-items: center; gap: 8px; color: #1a73e8; }
+@keyframes spin { 100% { transform: rotate(360deg); } }

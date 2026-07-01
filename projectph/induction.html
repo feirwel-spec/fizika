@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Электромагнитная индукция</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-decorations">
+        <svg class="bg-decor" style="top: -5%; left: -5%; width: 450px; height: 450px;" viewBox="0 0 200 200">
+            <path d="M 60 40 Q 100 0 140 40" stroke-width="2" fill="none" stroke-dasharray="4 4"/>
+            <path d="M 40 60 Q 100 -20 160 60" stroke-width="2" fill="none" stroke-dasharray="4 4"/>
+            <path d="M 60 160 Q 100 200 140 160" stroke-width="2" fill="none" stroke-dasharray="4 4"/>
+            <path d="M 40 140 Q 100 220 160 140" stroke-width="2" fill="none" stroke-dasharray="4 4"/>
+            <rect x="80" y="60" width="40" height="80" fill="none" stroke-width="4"/>
+            <line x1="80" y1="100" x2="120" y2="100" stroke-width="2"/>
+        </svg>
+        <svg class="bg-decor" style="bottom: -10%; right: -5%; width: 500px; height: 500px;" viewBox="0 0 200 200">
+            <polyline points="20,100 60,60 100,140 140,40 180,100" fill="none" stroke-width="3" stroke-linejoin="round"/>
+            <line x1="20" y1="100" x2="180" y2="100" stroke-width="1"/>
+        </svg>
+    </div>
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Электромагнитная индукция</h1>
+    </div>
+    <div class="layout">
+        <div class="card canvas-container">
+            <div class="canvas-header">Окно симуляции и графики</div>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+        </div>
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Магнитная индукция (B) <span id="magVal" class="val-display">10 Тл</span></label>
+                <input type="range" id="magStrength" min="1" max="30" value="10">
+            </div>
+            <div class="control-group">
+                <label>Радиус катушки (R) <span id="radVal" class="val-display">40 px</span></label>
+                <input type="range" id="coilRadius" min="20" max="80" value="40">
+            </div>
+            <button id="dropBtn" class="btn-primary">Отпустить магнит</button>
+        </div>
+    </div>
+    <div class="watermark">TSOYILYA</div>
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let B0 = 10;
+        let R = 40;
+        let magnetY = 40;
+        let magnetVy = 0;
+        let isFalling = false;
+        let coilY = 200;
+        let coilX = 125;
+        let dt = 0.05;
+        let g = 9.81;
+        let lastPhi = 0;
+        
+        let historyPhi = [];
+        let historyEMF = [];
+        let maxHist = 250;
+        let graphXOffset = 320;
+        
+        let currentAngle = 0;
+
+        document.getElementById('magStrength').addEventListener('input', (e) => {
+            B0 = parseFloat(e.target.value);
+            document.getElementById('magVal').innerText = B0 + ' Тл';
+        });
+        document.getElementById('coilRadius').addEventListener('input', (e) => {
+            R = parseFloat(e.target.value);
+            document.getElementById('radVal').innerText = R + ' px';
+        });
+        document.getElementById('dropBtn').addEventListener('click', () => {
+            magnetY = 40;
+            magnetVy = 0;
+            isFalling = true;
+            historyPhi = [];
+            historyEMF = [];
+            let normDy = (magnetY - coilY) / 20;
+            lastPhi = (B0 * R) / (normDy * normDy + R * 0.1);
+        });
+
+        function updatePhysics() {
+            if (!isFalling) return;
+            magnetVy += g * dt;
+            magnetY += magnetVy * dt * 10;
+            let normDy = (magnetY - coilY) / 20;
+            let phi = (B0 * R) / (normDy * normDy + R * 0.1);
+            let emf = -(phi - lastPhi) / dt;
+            lastPhi = phi;
+            historyPhi.push(phi);
+            historyEMF.push(emf);
+            if (historyPhi.length > maxHist) {
+                historyPhi.shift();
+                historyEMF.shift();
+            }
+            if (magnetY > 400) {
+                isFalling = false;
+            }
+            currentAngle += emf * 0.01;
+        }
+
+        function drawGraphs() {
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(280, 0, 320, 400);
+            ctx.beginPath();
+            ctx.moveTo(280, 0);
+            ctx.lineTo(280, 400);
+            ctx.strokeStyle = '#dadce0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(300, 150);
+            ctx.lineTo(580, 150);
+            ctx.moveTo(300, 300);
+            ctx.lineTo(580, 300);
+            ctx.strokeStyle = '#bdc1c6';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#5f6368';
+            ctx.font = '12px Roboto';
+            ctx.fillText('Магнитный поток (Φ)', 355, 30);
+            ctx.fillText('ЭДС Индукции (ε)', 345, 200);
+
+            if (historyPhi.length > 1) {
+                ctx.beginPath();
+                for (let i = 0; i < historyPhi.length; i++) {
+                    let gx = graphXOffset + i;
+                    let gy = 150 - historyPhi[i] * 3;
+                    if (i === 0) ctx.moveTo(gx, gy);
+                    else ctx.lineTo(gx, gy);
+                }
+                ctx.strokeStyle = '#1a73e8';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.beginPath();
+                for (let i = 0; i < historyEMF.length; i++) {
+                    let gx = graphXOffset + i;
+                    let gy = 300 - historyEMF[i] * 5;
+                    if (i === 0) ctx.moveTo(gx, gy);
+                    else ctx.lineTo(gx, gy);
+                }
+                ctx.strokeStyle = '#ea4335';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updatePhysics();
+            drawGraphs();
+            
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#bdc1c6';
+            ctx.beginPath();
+            ctx.ellipse(coilX, coilY, R, R / 3, 0, Math.PI, Math.PI * 2);
+            ctx.stroke();
+            
+            let mWidth = 40;
+            let mHeight = 60;
+            ctx.fillStyle = '#ea4335';
+            ctx.fillRect(coilX - mWidth/2, magnetY - mHeight/2, mWidth, mHeight/2);
+            ctx.fillStyle = '#4285f4';
+            ctx.fillRect(coilX - mWidth/2, magnetY, mWidth, mHeight/2);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Roboto';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('N', coilX, magnetY - mHeight/4);
+            ctx.fillText('S', coilX, magnetY + mHeight/4);
+            
+            ctx.lineWidth = 6;
+            let currentIntensity = historyEMF.length > 0 ? Math.abs(historyEMF[historyEMF.length - 1]) : 0;
+            let colorVal = Math.min(255, currentIntensity * 10);
+            ctx.strokeStyle = `rgb(${150 + colorVal/2}, ${150 - colorVal/2}, ${150 - colorVal/2})`;
+            ctx.beginPath();
+            ctx.ellipse(coilX, coilY, R, R / 3, 0, 0, Math.PI);
+            ctx.stroke();
+            
+            if (currentIntensity > 1) {
+                let emf = historyEMF[historyEMF.length - 1];
+                ctx.fillStyle = '#ea4335';
+                for (let i = 0; i < 6; i++) {
+                    let angle = currentAngle + (i * Math.PI * 2 / 6);
+                    let px = coilX + R * Math.cos(angle);
+                    let py = coilY + (R / 3) * Math.sin(angle);
+                    if (Math.sin(angle) > 0) {
+                        ctx.beginPath();
+                        ctx.arc(px, py, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

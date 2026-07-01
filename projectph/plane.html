@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Наклонная плоскость</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Фоновые декорации: Механика -->
+    <div class="bg-decorations">
+        <!-- Маятник -->
+        <svg class="bg-decor" style="top: -5%; left: -5%; width: 500px; height: 500px;" viewBox="0 0 200 200">
+            <line x1="100" y1="20" x2="160" y2="120" stroke-width="3"/>
+            <circle cx="160" cy="120" r="15" fill="#202124"/>
+            <path d="M 60 20 L 140 20" stroke-width="4"/>
+            <path d="M 100 20 L 100 140" stroke-width="1" stroke-dasharray="4 4"/>
+            <path d="M 80 140 Q 100 160 160 120" fill="none" stroke-width="2" stroke-dasharray="4 4"/>
+        </svg>
+        <!-- Схема сил -->
+        <svg class="bg-decor" style="bottom: -10%; right: -5%; width: 600px; height: 600px;" viewBox="0 0 200 200">
+            <polygon points="20,180 180,180 180,80" fill="none" stroke-width="3"/>
+            <rect x="90" y="90" width="40" height="40" transform="rotate(-32 110 110)" fill="none" stroke-width="3"/>
+            <line x1="110" y1="110" x2="110" y2="170" stroke-width="3"/>
+            <polygon points="107,160 113,160 110,170" fill="#202124"/>
+        </svg>
+    </div>
+
+    <div class="header-bar">
+        <a href="index.html" class="icon-btn" title="Вернуться в меню">
+            <span class="material-icons">arrow_back</span>
+        </a>
+        <h1>Наклонная плоскость</h1>
+    </div>
+
+    <div class="layout">
+        <div class="card canvas-container">
+            <div style="padding: 16px 24px; border-bottom: 1px solid #dadce0; font-weight: 500;">Окно симуляции</div>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+        </div>
+
+        <div class="card controls-container">
+            <div class="control-group">
+                <label>Угол наклона α (°)</label>
+                <div class="input-row">
+                    <input type="range" id="angleRange" min="0" max="80" value="30">
+                    <input type="number" id="angleNum" min="0" max="80" value="30">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Масса тела m (кг)</label>
+                <div class="input-row">
+                    <input type="range" id="massRange" min="0.1" max="50" step="0.1" value="5">
+                    <input type="number" id="massNum" min="0.1" max="50" step="0.1" value="5">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Коэф. трения μ</label>
+                <div class="input-row">
+                    <input type="range" id="muRange" min="0" max="1" step="0.01" value="0.2">
+                    <input type="number" id="muNum" min="0" max="1" step="0.01" value="0.2">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Внешняя сила F_вн (Н)</label>
+                <div class="input-row">
+                    <input type="range" id="fExtRange" min="-150" max="150" value="0">
+                    <input type="number" id="fExtNum" min="-150" max="150" value="0">
+                </div>
+            </div>
+
+            <button id="resetBtn" class="btn-primary">Сбросить позицию</button>
+
+            <div class="legend">
+                <strong>Векторы сил:</strong>
+                <span style="color: #0f9d58;">▬ Тяжесть (mg)</span><br>
+                <span style="color: #4285f4;">▬ Реакция опоры (N)</span><br>
+                <span style="color: #db4437;">▬ Трение (Fтр)</span><br>
+                <span style="color: #9c27b0;">▬ Внешняя (Fвн)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="watermark">TSOYILYA</div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function setupDoubleInput(rangeId, numId) {
+            const rangeInput = document.getElementById(rangeId);
+            const numInput = document.getElementById(numId);
+
+            rangeInput.addEventListener('input', () => { numInput.value = rangeInput.value; });
+            numInput.addEventListener('input', () => {
+                let val = parseFloat(numInput.value);
+                const min = parseFloat(numInput.min);
+                const max = parseFloat(numInput.max);
+                if (isNaN(val)) val = min;
+                if (val < min) val = min;
+                rangeInput.value = val;
+            });
+            return numInput;
+        }
+
+        const inputs = {
+            angle: setupDoubleInput('angleRange', 'angleNum'),
+            mass: setupDoubleInput('massRange', 'massNum'),
+            mu: setupDoubleInput('muRange', 'muNum'),
+            fExt: setupDoubleInput('fExtRange', 'fExtNum')
+        };
+
+        document.getElementById('resetBtn').addEventListener('click', () => { position = 200; velocity = 0; });
+
+        const g = 9.81; 
+        const timeStep = 1 / 60; 
+        const pixelsPerMeter = 10; 
+        let position = 200; 
+        let velocity = 0;
+        const boxSize = 40;
+
+        function drawArrow(ctx, fromX, fromY, toX, toY, color) {
+            const headlen = 10; 
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const angle = Math.atan2(dy, dx);
+            if(Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) return;
+
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        function updatePhysics() {
+            const angleRad = (parseFloat(inputs.angle.value) || 0) * Math.PI / 180;
+            const m = parseFloat(inputs.mass.value) || 1;
+            const mu = parseFloat(inputs.mu.value) || 0;
+            const fExt = parseFloat(inputs.fExt.value) || 0;
+
+            const fg_x = -m * g * Math.sin(angleRad); 
+            const normalForce = m * g * Math.cos(angleRad); 
+            const netForceWithoutFriction = fExt + fg_x;
+            let fFriction = 0;
+            
+            if (Math.abs(velocity) > 0.05) {
+                fFriction = -Math.sign(velocity) * mu * normalForce;
+            } else {
+                if (Math.abs(netForceWithoutFriction) <= mu * normalForce) {
+                    fFriction = -netForceWithoutFriction; 
+                    velocity = 0;
+                } else {
+                    fFriction = -Math.sign(netForceWithoutFriction) * mu * normalForce;
+                }
+            }
+
+            const netForce = netForceWithoutFriction + fFriction;
+            const acceleration = netForce / m;
+
+            velocity += acceleration * timeStep * 5; 
+            position += velocity * timeStep * 5 * pixelsPerMeter;
+
+            if (position < 0) { position = 0; velocity = 0; }
+            if (position > 500) { position = 500; velocity = 0; }
+
+            return { m, angleRad, normalForce, fFriction, fExt };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const physicsData = updatePhysics();
+            const originX = 50, originY = 350;
+
+            ctx.save();
+            ctx.translate(originX, originY);
+            ctx.rotate(-physicsData.angleRad);
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(550, 0);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#5f6368';
+            ctx.stroke();
+
+            ctx.save();
+            ctx.rotate(physicsData.angleRad);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(550, 0); 
+            ctx.lineTo(550 * Math.cos(-physicsData.angleRad), 550 * Math.sin(-physicsData.angleRad));
+            ctx.fillStyle = '#e8eaed';
+            ctx.fill();
+            ctx.restore();
+
+            const blockX = position;
+            const blockY = -boxSize;
+            ctx.fillStyle = '#fbbc04'; 
+            ctx.fillRect(blockX, blockY, boxSize, boxSize);
+            ctx.strokeStyle = '#f29900';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(blockX, blockY, boxSize, boxSize);
+
+            const cx = blockX + boxSize / 2;
+            const cy = blockY + boxSize / 2;
+            const scale = 1.5; 
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(physicsData.angleRad); 
+            drawArrow(ctx, 0, 0, 0, physicsData.m * g * scale, '#0f9d58');
+            ctx.restore();
+
+            drawArrow(ctx, cx, cy, cx, cy - physicsData.normalForce * scale, '#4285f4'); 
+            drawArrow(ctx, cx, cy, cx + physicsData.fFriction * scale, cy, '#db4437'); 
+            drawArrow(ctx, cx, cy, cx + physicsData.fExt * scale, cy, '#9c27b0'); 
+
+            ctx.restore();
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
