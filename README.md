@@ -1,44 +1,39 @@
-Физика 2D — Интерактивная Виртуальная Лаборатория
-​Проект представляет собой масштабную веб-платформу для визуализации физических процессов. 
-По своей концепции это функциональный аналог Desmos, только для физики — инструмент, 
-позволяющий проводить виртуальные эксперименты в реальном времени, изменять параметры 
-систем и наблюдать за результатом с математической и визуальной точностью.
-​Проект разработан как комплексное образовательное пособие, охватывающее все основные разделы 
-физики: от классической механики до квантово-волновой оптики и теории графов в электродинамике.
+# 🔬 Физическая лаборатория (Physics Laboratory)
 
-Особенности и Модули:
+An interactive web-based educational simulator for modeling and exploring physical phenomena using real-world mathematical equations. Built as a lightweight, standalone single-file application with zero external dependencies (pure HTML/CSS/JS).
 
-​Лаборатория включает 11 независимых интерактивных симуляций:
-​Наклонная плоскость: Векторный анализ сил (трение, гравитация, реакция опоры) при движении тела.
-​Сила Лоренца: Динамика заряженной частицы в магнитном поле, расчет циклотронного радиуса.
-​Силовые линии поля: Построение эквипотенциальных поверхностей и векторов напряженности системы зарядов.
-​Геометрическая оптика: Трассировка лучей (Raycasting), преломление и отражение света в линзах и зеркалах.
-​Идеальный газ (МКТ): Стохастическое движение упругих молекул в замкнутом объеме, зависимость P, V, T.
-​Баллистика: Кинематика свободного падения с учетом аэродинамического сопротивления среды.
-​Двойной маятник: Демонстрация детерминированного хаоса и чувствительности системы к начальным условиям.
-​Магнитная индукция: Интерактивное падение магнита сквозь контур с визуализацией закона Фарадея-Максвелла.
-​Интерференция волн: Попиксельный рендеринг когерентного наложения волн от двух источников (Опыт Юнга).
-​Эффект Доплера: Визуализация и акустическая генерация звуковых волн, преодоление звукового барьера.
-​Лаборатория цепей: Полноценный конструктор электрических схем постоянного тока на базе сетки.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
-Проект написан на чистом, нативном коде без использования тяжеловесных библиотек или фреймворков (No React/Vue, No Three.js/Matter.js).
-​Frontend: HTML5, CSS3, Vanilla JavaScript.
-​Рендеринг: HTML5 Canvas API. Используется гибридный подход: векторная объектная отрисовка для механики и прямой попиксельный доступ (ImageData) для симуляции волновых полей.
-​Акустика: Web Audio API (генерация чистых синусоид и динамический расчет частоты звука на лету).
-​API & Сеть: Fetch API, асинхронные функции (async/await) для работы с внешними данными.
-​Хранение данных: браузерный Local Storage для сохранения пользовательского контекста.
+---
 
-Архитектура рендеринга и расчетного ядра во многом вдохновлена подходами из профессионального геймдева (подобно паттернам в Unity или Delphi):
-​Изолированный Update Loop: Математическая физика отделена от рендеринга. Используется requestAnimationFrame для достижения стабильных 60 FPS.
-​Субшаговое интегрирование (Substepping): Для устранения математических взрывов в жестких системах (например, в связанных осцилляторах) время кадра разбивается на микро-шаги.
-​Алгоритмы на графах (BFS): В лаборатории цепей применен алгоритм поиска в ширину для анализа топологии замкнутых контуров. Ток течет только по тем ветвям, которые образуют непрерывный путь к полюсам источника ЭДС.
+## 🌟 Features
 
-Установка и запуск:
+- **4 Core Physical Experiments:**
+  - **Pendulum:** Mathematical pendulum simulation accounting for string length, initial angle, planetary gravity (Earth, Moon, Mars, Jupiter), and damping[cite: 1].
+  - **Projectile Motion:** Ballistic trajectory analysis with adjustable launch velocity, angle, initial height, and air resistance toggle[cite: 1].
+  - **Spring-Mass System:** Harmonic oscillations demonstrating kinetic/potential energy transformations and frictional energy dissipation[cite: 1].
+  - **Ohm's Law:** Interactive DC circuits (series and parallel) with visual electron current flow and thermal resistor heating based on dissipated power[cite: 1].
+- **Sandbox Mode (Free Setup):** A fully customizable playground where users can drag-and-drop objects (pucks, balls, weights, clay), surfaces (ice, trampolines, rough platforms), constraints (springs, ropes), and measuring instruments[cite: 1].
+- **Real-time Data Visualization:** Dynamic canvas-based plotting of parameters (velocities, trajectories, energy charts) synchronized with numerical readouts[cite: 1].
+- **Measurement Instruments:** Interactive tools including rulers, motion sensors, dynamometers, and stopwatches[cite: 1].
+- **Experiment Logbook:** Save and review measurement parameters and outcomes on the fly[cite: 1].
+- **Adaptive UI & Themes:** Responsive layout optimized for desktops and mobile touchscreens, featuring automatic Light/Dark mode support[cite: 1].
 
-​Проект не требует сборки или установки зависимостей.
+---
 
-1.Копируем git clone https://github.com/feirwel-spec/fizika.git
-2.Окройте папку проекта.
-3.Запустите файл index.html влюбом современном браузеpe (Chrome, Firefox, Safari, Edge)
+## ⚙️ Physics Engine & Tech Stack
 
-АВТОР TSOY ILYA
+- **Numerical Integration:** Motion and dynamics are computed numerically using the 4th-order Runge-Kutta (RK4) method with a fixed internal time-step ($\le 4\text{ ms}$) to ensure stability and precision[cite: 1].
+- **State Persistence:** Sandbox setups and user configurations are automatically saved via browser `localStorage`[cite: 1].
+- **Tech Stack:** Vanilla JavaScript (ES6+), HTML5 Canvas API, CSS3 (Variables, Grid, Flexbox), Google Fonts (Manrope, JetBrains Mono, Unbounded)[cite: 1].
+
+---
+
+## 🚀 Getting Started
+
+No build tools, package managers, or servers are required to run the project.
+
+1. Clone or download the repository:
+   ```bash
+   git clone [https://github.com/your-username/physics-laboratory.git](https://github.com/your-username/physics-laboratory.git)
