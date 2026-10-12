@@ -1,4 +1,4 @@
-# 🔬 Физическая лаборатория (Physics Laboratory)
+# 🔬 Physics Laboratory
 
 An interactive web-based educational simulator for modeling and exploring physical phenomena using real-world mathematical equations. Built as a lightweight, standalone single-file application with zero external dependencies (pure HTML/CSS/JS).
 
